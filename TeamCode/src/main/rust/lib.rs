@@ -1,8 +1,9 @@
 use android_logger::Config;
-use log::{info, LevelFilter};
+use log::{error, info, LevelFilter};
 use jni::JNIEnv;
 use jni::objects::{JClass, JByteBuffer};
 use jni::sys::jint;
+use std::panic;
 use std::sync::atomic::{AtomicBool, AtomicU16, AtomicI16, AtomicI32, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -41,7 +42,21 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
             .with_max_level(LevelFilter::Debug)
             .with_tag("RustSDK")
     );
-
+	
+	panic::set_hook(Box::new(|err| {
+		if let Some(loc) = err.location() {
+			if let Some(err_msg) = err.payload().downcast_ref::<&str>() {
+				error!("Panic, Message: {:?}, Location: {}", err_msg, loc)
+			} else if let Some(err_msg) = err.payload().downcast_ref::<String>() {
+				error!("Panic, Message: {:?}, Location: {}", err_msg, loc)
+			} else {
+				error!("Unknown panic at Location: {}", loc)
+			}
+		} else {
+			error!("BRO WTF IS GOING ON, WHY THERE NO LOCATION FOR DA PANIC")
+		}
+	}));
+	
     // Open the serial port
     if let Ok(serial_port)
         = serialport::new("/dev/ttyS0", 460_800)
