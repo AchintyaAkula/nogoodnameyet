@@ -53,7 +53,13 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
 				error!("Unknown panic at Location: {}", loc)
 			}
 		} else {
-			error!("BRO WTF IS GOING ON, WHY THERE NO LOCATION FOR DA PANIC")
+			if let Some(err_msg) = err.payload().downcast_ref::<&str>() {
+				error!("Panic, Message: {:?}, Location: NOT FOUND", err_msg, )
+			} else if let Some(err_msg) = err.payload().downcast_ref::<String>() {
+				error!("Panic, Message: {:?}, Location: NOT FOUND", err_msg)
+			} else {
+				error!("BRO WHY TF IS THERE NO INFO FOR THE PANIC")
+			}
 		}
 	}));
 	
