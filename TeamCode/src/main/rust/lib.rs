@@ -42,27 +42,27 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
             .with_max_level(LevelFilter::Debug)
             .with_tag("RustSDK")
     );
-	
-	panic::set_hook(Box::new(|err| {
-		if let Some(loc) = err.location() {
-			if let Some(err_msg) = err.payload().downcast_ref::<&str>() {
-				error!("Panic, Message: {:?}, Location: {}", err_msg, loc)
-			} else if let Some(err_msg) = err.payload().downcast_ref::<String>() {
-				error!("Panic, Message: {:?}, Location: {}", err_msg, loc)
-			} else {
-				error!("Unknown panic at Location: {}", loc)
-			}
-		} else {
-			if let Some(err_msg) = err.payload().downcast_ref::<&str>() {
-				error!("Panic, Message: {:?}, Location: NOT FOUND", err_msg, )
-			} else if let Some(err_msg) = err.payload().downcast_ref::<String>() {
-				error!("Panic, Message: {:?}, Location: NOT FOUND", err_msg)
-			} else {
-				error!("BRO WHY TF IS THERE NO INFO FOR THE PANIC")
-			}
-		}
-	}));
-	
+    
+    panic::set_hook(Box::new(|err| {
+        if let Some(loc) = err.location() {
+            if let Some(err_msg) = err.payload().downcast_ref::<&str>() {
+                error!("Panic, Message: {:?}, Location: {}", err_msg, loc)
+            } else if let Some(err_msg) = err.payload().downcast_ref::<String>() {
+                error!("Panic, Message: {:?}, Location: {}", err_msg, loc)
+            } else {
+                error!("Unknown panic at Location: {}", loc)
+            }
+        } else {
+            if let Some(err_msg) = err.payload().downcast_ref::<&str>() {
+                error!("Panic, Message: {:?}, Location: NOT FOUND", err_msg, )
+            } else if let Some(err_msg) = err.payload().downcast_ref::<String>() {
+                error!("Panic, Message: {:?}, Location: NOT FOUND", err_msg)
+            } else {
+                error!("BRO WHY TF IS THERE NO INFO FOR THE PANIC")
+            }
+        }
+    }));
+    
     // Open the serial port
     if let Ok(serial_port)
         = serialport::new("/dev/ttyS0", 460_800)
