@@ -38,7 +38,7 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
     // Add logger
     android_logger::init_once(
         Config::default()
-            .with_max_level(LevelFilter::Info)
+            .with_max_level(LevelFilter::Debug)
             .with_tag("RustSDK")
     );
 
@@ -297,6 +297,7 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
             );
         }
     }
+    info!("Pipeline initialization finished")
 }
 
 
