@@ -12,12 +12,6 @@ use std::time::{Duration, Instant};
 const ATOMIC_I32_INIT: AtomicI32 = AtomicI32::new(0);
 const ATOMIC_I16_INIT: AtomicI16 = AtomicI16::new(0);
 
-static mut TIME_SUM_W: u128 = 0;
-static mut LOOP_COUNT_W: u32 = 0;
-
-static mut TIME_SUM_R: u128 = 0;
-static mut LOOP_COUNT_R: u32 = 0;
-
 static PIPELINE_THREAD_RUNNING: AtomicBool = AtomicBool::new(false);
 static COMMAND_QUEUE: [AtomicI16; 20] = [ATOMIC_I16_INIT; 20];
 static ENCODER_POS_READINGS: [AtomicI32; 8] = [ATOMIC_I32_INIT; 8];
@@ -99,7 +93,7 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
                                 0x00,            // Source id: 0 since its from c-hub code
                                 module_id        // Module id: 1 or 2 based on destination hub
                             ]);
-                            packet[byte_counter+5..=byte_counter+7].copy_from_slice(&[
+                            packet[byte_counter+5..=byte_counter+8].copy_from_slice(&[
                                 0x00,            // Payload size: 00
                                 0x0b,            // Payload size: 11
                                 0x01,            // DC Motor Module Interface
@@ -159,9 +153,13 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
                     }
 
                     let true_packet_size: usize = byte_counter;
-
+					
+					let mut loop_counter: u32 = 0;
+					let mut time_sum: u128 = 0;
+					
                     // While everything is still running and opmode not stopped
                     while PIPELINE_THREAD_RUNNING.load(Ordering::Relaxed) {
+						
                         let start_time = Instant::now();
 
                         // Iterate through actuators and inject packet data
@@ -210,10 +208,12 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
 
                         thread::sleep(Duration::from_micros(1000));
                         let loop_time = start_time.elapsed().as_micros();
-                        TIME_SUM_W += loop_time;
-                        LOOP_COUNT_W += 1;
-                        if LOOP_COUNT_W == 500 {
-                            info!("Write Thread Looptime report: {} us", (TIME_SUM_W/(LOOP_COUNT_W as u128)));
+                        time_sum += loop_time;
+                        loop_counter += 1;
+                        if loop_counter == 500 {
+                            info!("Write Thread Looptime report: {} us", (time_sum/(loop_counter as u128)));
+							loop_counter = 0;
+							time_sum = 0;
                         }
 
                     }
@@ -225,13 +225,18 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
             thread::spawn(
                 move || {
                     let mut read_buffer: [u8; 1024] = [0u8; 1024];
-
+					let mut rollover_bytes: usize = 0;
+					
+					let mut loop_counter: u32 = 0;
+					let mut time_sum: u128 = 0;
+					
                     // While opmode is running
                     while PIPELINE_THREAD_RUNNING.load(Ordering::Relaxed) {
                         let start_time = Instant::now();
 
                         // Get the data from the port
-                        if let Ok(data_size) = read_port.read(&mut read_buffer) {
+                        if let Ok(bytes_read) = read_port.read(&mut read_buffer[rollover_bytes..]) {
+							let data_size = rollover_bytes + bytes_read;
                             let mut pk_start = 0;
 
                             // While there is still data left
@@ -247,7 +252,7 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
                                     if (hub_id == 1) || (hub_id == 2) {
 
                                         // Make sure all data has been recieved
-                                        if pk_start + 39 <= data_size {
+                                        if pk_start + 43 <= data_size {
                                             let offset: usize = ((hub_id - 1) * 4) as usize;
 
                                             // Parse and store digital values
@@ -264,9 +269,11 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
                                                 });
                                             }
 
+											// Skip over the motor status bytes
+
                                             // Parse and store motor encoder pos data
                                             for m_port in 0..4 {
-                                                let start_pos = pk_start + 6 + (m_port * 4);
+                                                let start_pos = pk_start + 10 + (m_port * 4);
                                                 let encoder_value = i32::from_le_bytes([
                                                     read_buffer[start_pos],
                                                     read_buffer[start_pos+1],
@@ -278,7 +285,7 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
 
                                             // Parse and store motor encoder vel data
                                             for m_port in 0..4 {
-                                                let start_pos = pk_start + 22 + (m_port * 2);
+                                                let start_pos = pk_start + 26 + (m_port * 2);
                                                 let encoder_value = i16::from_le_bytes([
                                                     read_buffer[start_pos],
                                                     read_buffer[start_pos+1]
@@ -288,7 +295,7 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
 
                                             // Parse and store analog data
                                             for a_port in 0..4 {
-                                                let start_pos = pk_start + 30 + (a_port * 2);
+                                                let start_pos = pk_start + 34 + (a_port * 2);
                                                 let analog_value = i16::from_le_bytes([
                                                     read_buffer[start_pos],
                                                     read_buffer[start_pos+1]
@@ -296,23 +303,28 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
                                                 ANALOG_VALUES[a_port + offset].store(analog_value, Ordering::Relaxed);
                                             }
                                             // Advance to next packet
-                                            pk_start += 39;
+                                            pk_start += 43;
                                             continue;
                                         } else {
                                             break;
                                         }
                                     } else {
-                                        break;
+                                        pk_start += 1;
+										continue;
                                     }
                                 }
                                 pk_start += 1;
                             }
+							rollover_bytes = data_size - pk_start;
+							read_buffer.copy_within(pk_start..data_size, 0);
                         }
                         let loop_time = start_time.elapsed().as_micros();
-                        TIME_SUM_R += loop_time;
-                        LOOP_COUNT_R += 1;
-                        if LOOP_COUNT_R == 500 {
-                            info!("Read Thread Looptime report: {} us", (TIME_SUM_R/(LOOP_COUNT_R as u128)));
+                        time_sum += loop_time;
+                        loop_counter += 1;
+                        if loop_counter == 500 {
+                            info!("Read Thread Looptime report: {} us", (time_sum/(loop_counter as u128)));
+							loop_counter = 0;
+							time_sum = 0;
                         }
                     }
                 }
@@ -351,18 +363,18 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_internalU
     COMMAND_QUEUE[5].store(e_m_1 as i16, Ordering::Relaxed);
     COMMAND_QUEUE[6].store(e_m_2 as i16, Ordering::Relaxed);
     COMMAND_QUEUE[7].store(e_m_3 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(c_s_0 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(c_s_1 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(c_s_2 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(c_s_3 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(c_s_4 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(c_s_5 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(e_s_0 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(e_s_1 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(e_s_2 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(e_s_3 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(e_s_4 as i16, Ordering::Relaxed);
-    COMMAND_QUEUE[0].store(e_s_5 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[8].store(c_s_0 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[9].store(c_s_1 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[10].store(c_s_2 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[11].store(c_s_3 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[12].store(c_s_4 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[13].store(c_s_5 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[14].store(e_s_0 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[15].store(e_s_1 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[16].store(e_s_2 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[17].store(e_s_3 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[18].store(e_s_4 as i16, Ordering::Relaxed);
+    COMMAND_QUEUE[19].store(e_s_5 as i16, Ordering::Relaxed);
 }
 
 // Send all the data in bulk to Java

@@ -60,22 +60,22 @@ public class Hubs {
     // Return digital true/false value
     public boolean getDigitalValue( int portNum, boolean controlHub) {
         int port = controlHub ? portNum : portNum + 8;
-        return digitalChannelValues[portNum];
+        return digitalChannelValues[port];
     }
     // Return analog value
     public int getAnalogValue(int portNum, boolean controlHub) {
         int port = controlHub ? portNum : portNum + 4;
-        return analogEncoderValues[portNum];
+        return analogEncoderValues[port];
     }
     // Return motor encoder position
     public int getEncPosition(int portNum, boolean controlHub) {
         int port = controlHub ? portNum : portNum + 4;
-        return encoderPositionValues[portNum];
+        return encoderPositionValues[port];
     }
     // Return motor encoder velocity
     public int getEncVelocity(int portNum, boolean controlHub) {
         int port = controlHub ? portNum : portNum + 4;
-        return encoderVelocityValues[portNum];
+        return encoderVelocityValues[port];
     }
 
     // All hardware write functions
