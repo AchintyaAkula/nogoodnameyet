@@ -42,7 +42,8 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
             .with_max_level(LevelFilter::Debug)
             .with_tag("RustSDK")
     );
-    
+
+    // Log panics to the logcat
     panic::set_hook(Box::new(|err| {
         if let Some(loc) = err.location() {
             if let Some(err_msg) = err.payload().downcast_ref::<&str>() {
