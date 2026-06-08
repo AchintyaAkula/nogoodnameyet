@@ -32,7 +32,7 @@ public class Hubs {
     }
 
     // Native rust functions
-    private native void initializeRustPipeline(int motorUsages, int ServoUsages);
+    private native void initializeRustPipeline(int motorUsages, int ServoUsages, int hubCount);
     private native void shutdownRustPipeline();
     private native void internalUpdate(
             int cm0, int cm1, int cm2, int cm3,
@@ -99,8 +99,8 @@ public class Hubs {
     }
 
     // Initialize the rust pipeline
-    public void initialize() {
-        initializeRustPipeline(motorUsages, servoUsages);
+    public void initialize(int hubCount) {
+        initializeRustPipeline(motorUsages, servoUsages, hubCount);
     }
     // Update and send the necessary data over to rust, and get bulk data
     public void update() {

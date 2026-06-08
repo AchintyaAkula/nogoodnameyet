@@ -15,7 +15,7 @@ public class BasicMotorTest extends OpMode {
     @Override
     public void init() {
         Hubs.INSTANCE.registerMotor(motorPortNum, isOnControlHub);
-        Hubs.INSTANCE.initialize();
+        Hubs.INSTANCE.initialize(1);
     }
 
     @Override

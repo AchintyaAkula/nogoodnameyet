@@ -14,9 +14,9 @@ public class BasicServoTest extends OpMode {
 
     @Override
     public void init() {
-        Hubs.INSTANCE.initialize();
-        // Enter in whether it is on the control hub or not with a true/false value, and the port number, either 0,1,2,3
         Hubs.INSTANCE.registerServo(servoPortNum, isOnControlHub);
+        Hubs.INSTANCE.initialize(1);
+        // Enter in whether it is on the control hub or not with a true/false value, and the port number, either 0,1,2,3
     }
 
     @Override

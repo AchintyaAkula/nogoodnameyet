@@ -25,7 +25,8 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
     _env: JNIEnv,
     _class: JClass,
     motor_usages: jint,
-    servo_usages: jint
+    servo_usages: jint,
+	hub_count: jint
 ) {
     // Check if pipeline running, and make it to true if it isn't
     if PIPELINE_THREAD_RUNNING.swap(true, Ordering::SeqCst) { return; }
@@ -136,7 +137,7 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
                         }
                     }
 
-                    for hub in 1..=2 {
+                    for hub in 1..(1+(hub_count as usize)) {
                         let module_id: u8 = hub as u8;
                         packet[byte_counter..=byte_counter+3].copy_from_slice(&[
                             0x44,           // D
