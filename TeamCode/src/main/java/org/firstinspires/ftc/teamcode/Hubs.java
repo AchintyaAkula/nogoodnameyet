@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
@@ -7,6 +10,7 @@ import java.util.Arrays;
 
 @SuppressWarnings("unused")
 public class Hubs {
+    private static final Logger log = LoggerFactory.getLogger(Hubs.class);
     private final ByteBuffer data;
     private final IntBuffer intData;
 
@@ -85,6 +89,7 @@ public class Hubs {
         int port = controlHub ? portNum : portNum + 4;
         int powerInt = (int) (power * 32767);
         if (motorPowers[port] != powerInt) {
+            log.info("I just set a power from port" + port);
             motorPowers[port] = powerInt;
             updateNeeded = true;
         }

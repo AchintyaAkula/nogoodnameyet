@@ -331,6 +331,8 @@ pub unsafe extern "system" fn Java_org_firstinspires_ftc_teamcode_Hubs_initializ
                 }
             );
         }
+    } else {
+        info!("Cant get serial port")
     }
     info!("Pipeline initialization finished")
 }
